@@ -163,7 +163,7 @@ def shannon_entropy(sequence):
     _, counts = np.unique(sequence, return_counts=True)
     return entropy(counts, base=2)
 
-def lyapunov_logistic(a, x, n_discard=100):
+def lyapunov_logistic(a, x, n_discard=0):
     """Calculate the Lyapunov exponent for the logistic map."""
     return np.mean(np.log(np.abs(a * (1 - 2 * x[n_discard:]))))
 
@@ -174,25 +174,32 @@ def lyapunov_henon(a, b, x, y, n_discard=0):
     n = len(x) - n_discard
     lyap = np.zeros(n)
     
+    # Initial perturbation vector
+    v = np.array([1.0, 0.0])
+    
     for i in range(n):
         # Calculate Jacobian for each point
-        J = np.array([[-2*a*x[i+n_discard], 1],
+        J = np.array([[-2 * a * x[i + n_discard], 1],
                       [b, 0]])
         
-        # Calculate eigenvalues
-        eigs = np.linalg.eigvals(J)  # Direct eigenvalue calculation
-        max_eig = np.max(np.abs(eigs))
+        # Apply the Jacobian to the perturbation vector
+        v = J @ v
+        # Normalize the perturbation vector to prevent overflow/underflow
+        norm_v = np.linalg.norm(v)
         
-        if max_eig > 0:
-            lyap[i] = np.log(max_eig)
+        if norm_v > 0:
+            v /= norm_v
+            # Store the logarithm of the norm
+            lyap[i] = np.log(norm_v)
         else:
-            lyap[i] = -np.inf  # Handle non-positive eigenvalues
-
-    # Remove any -inf or NaN from lyap
-    lyap = np.nan_to_num(lyap, nan=0.0, posinf=0.0)
-
+            lyap[i] = -np.inf  # Handle non-positive norms
+    
+    # Remove -inf values to avoid affecting the mean
+    lyap = lyap[lyap > -np.inf]
+    
     # Calculate and return the Lyapunov exponent
-    return 0.5 * np.mean(lyap[lyap > -np.inf])  # Ensure we only take the mean of valid entries
+    return np.mean(lyap)
+
 
 
 def lyapunov_lorenz(sigma, rho, beta, trajectory, dt, n_discard=0):
