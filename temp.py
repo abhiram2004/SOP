@@ -1,60 +1,6 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import entropy
-from scipy.integrate import odeint
-import math
 from collections import Counter
 import itertools
 import string
-
-def logistic_map(a, x0, n):
-    """Generate a time series using the logistic map."""
-    x = np.zeros(n)
-    x[0] = x0
-    for i in range(1, n):
-        x[i] = a * x[i-1] * (1 - x[i-1])
-    return x
-
-def lyapunov_exponent(a, x, n_discard=0):
-    """Calculate the Lyapunov exponent for the logistic map."""
-    return np.mean(np.log(np.abs(a * (1 - 2 * x[n_discard:]))))
-
-def symbolize(time_series, num_bins=4):
-    """Convert a time series to a symbolic sequence."""
-    min_val, max_val = np.min(time_series), np.max(time_series)
-    mean_val = np.mean(time_series)
-    v1 = (min_val + mean_val) / 2
-    v2 = (mean_val + max_val) / 2
-    
-    bins = [min_val, v1, mean_val, v2, max_val]
-    symbols = ['A', 'B', 'C', 'D']
-    
-    return [symbols[np.digitize(x, bins[1:-1]) - 1] for x in time_series]
-
-def lempel_ziv_complexity(sequence):
-    """Calculate the Lempel-Ziv complexity of a symbolic sequence."""
-    sub_strings = set()
-    i, n = 0, len(sequence)
-    
-    while i < n:
-        j = i + 1
-        while j <= n:
-            sub = ''.join(sequence[i:j])
-            if sub not in sub_strings:
-                sub_strings.add(sub)
-                i = j
-                break
-            j += 1
-        if j == n + 1:
-            break
-    
-    return len(sub_strings)
-
-def normalized_lz_complexity(sequnce):
-    n = len(symbolic_sequence)
-    alpha = len(set(symbolic_sequence))
-    c = lempel_ziv_complexity(symbolic_sequence)
-    return (c / n) * math.log(n, alpha)
 
 def most_frequent_pair(sequence):
     """Find the most frequent pair in the sequence."""
@@ -83,6 +29,8 @@ def replace_pair(sequence, pair, new_symbol):
             new_sequence.append(sequence[i])
             i += 1
     return new_sequence
+import itertools
+import string
 
 def next_symbol_generator():
     """Generate an infinite sequence of symbols."""
@@ -107,6 +55,7 @@ def next_symbol(counter=None):
     """Fetch the next available symbol from the generator."""
     return next(symbol_gen)
 
+
 def etc_complexity(sequence):
     """Calculate the Entropy-based Transformation Complexity (ETC)."""
     # Convert sequence into a list of characters for mutability.
@@ -130,12 +79,7 @@ def etc_complexity(sequence):
     
     return step
 
-def normalized_etc_complexity(sequence):
-    n = len(symbolic_sequence)
-    etc = etc_complexity(symbolic_sequence)
-    return etc / (n - 1)
-
-def shannon_entropy(sequence):
-    """Calculate the Shannon entropy of a symbolic sequence."""
-    _, counts = np.unique(sequence, return_counts=True)
-    return entropy(counts, base=2)
+# Example usage:
+input_sequence = "AABABBAB"
+complexity = etc_complexity(input_sequence)
+print(f"ETC Complexity: {complexity}")

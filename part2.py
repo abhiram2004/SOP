@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 from scipy.stats import entropy
 from scipy.integrate import odeint
 import math
+from collections import Counter
+from utilities import *
+
 
 def logistic_map(a, x0, n):
     """Generate a time series using the logistic map."""
@@ -26,7 +29,7 @@ def lorenz_system(state, t, sigma, rho, beta):
     x, y, z = state
     dx = sigma * (y - x)
     dy = x * (rho - z) - y
-    dz = x * y - beta * z
+    dz = x * y - beta * z    
     return [dx, dy, dz]
 
 def generate_lorenz(sigma, rho, beta, x0, y0, z0, n, dt):
@@ -76,16 +79,79 @@ def normalized_lz_complexity(sequence):
         return 0.0
     return (c / n) * math.log(n, alpha)
 
+def most_frequent_pair(sequence):
+    """Find the most frequent pair in the sequence."""
+    pair_counts = Counter()
+    
+    # Count all pairs in the sequence.
+    for i in range(len(sequence) - 1):
+        pair = (sequence[i], sequence[i + 1])  # Use tuples to represent pairs.
+        pair_counts[pair] += 1
+    
+    # Find the pair with the maximum count.
+    if not pair_counts:
+        return None
+    return max(pair_counts, key=pair_counts.get)
+
+def replace_pair(sequence, pair, new_symbol):
+    """Replace all occurrences of a given pair in the sequence with a new symbol."""
+    i = 0
+    new_sequence = []
+    while i < len(sequence):
+        # Check if the current and next symbols form the target pair.
+        if i < len(sequence) - 1 and (sequence[i], sequence[i + 1]) == pair:
+            new_sequence.append(new_symbol)
+            i += 2  # Skip the pair.
+        else:
+            new_sequence.append(sequence[i])
+            i += 1
+    return new_sequence
+
+def next_symbol_generator():
+    """Generate an infinite sequence of symbols."""
+    # Use uppercase letters, then lowercase, and combine them as needed.
+    characters = string.ascii_letters  # 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    
+    # Generate single-letter symbols first.
+    for char in characters:
+        yield char
+    
+    # Generate combinations of increasing length.
+    length = 2
+    while True:
+        for combination in itertools.product(characters, repeat=length):
+            yield ''.join(combination)
+        length += 1
+
+# Create a generator instance.
+symbol_gen = next_symbol_generator()
+
+def next_symbol(counter=None):
+    """Fetch the next available symbol from the generator."""
+    return next(symbol_gen)
+
 def etc_complexity(sequence):
-    """Calculate the Effort-To-Compress complexity of a symbolic sequence."""
-    iterations = 0
-    while len(set(sequence)) > 1:
-        pairs = [''.join(sequence[i:i+2]) for i in range(len(sequence)-1)]
-        most_common = max(set(pairs), key=pairs.count)
-        new_symbol = chr(max(ord(max(sequence)) + 1, 128))
-        sequence = ''.join(sequence).replace(most_common, new_symbol)
-        iterations += 1
-    return iterations
+    """Calculate the Entropy-based Transformation Complexity (ETC)."""
+    # Convert sequence into a list of characters for mutability.
+    sequence = list(sequence)
+    current_symbols = set(sequence)
+    step = 0
+    
+    while len(set(sequence)) > 1 and len(sequence) > 1:
+        pair = most_frequent_pair(sequence)
+        if pair is None:
+            break  # No pairs to replace, end the process.
+        
+        # Generate the next available symbol.
+        new_symbol = next_symbol(current_symbols)
+        current_symbols.add(new_symbol)
+        
+        # Replace the pair with the new symbol.
+        sequence = replace_pair(sequence, pair, new_symbol)
+        step += 1
+        # print(f"Step {step}: Sequence transformed to {''.join(sequence)}")
+    
+    return step
 
 def normalized_etc_complexity(sequence):
     n = len(sequence)
@@ -101,7 +167,9 @@ def lyapunov_logistic(a, x, n_discard=100):
     """Calculate the Lyapunov exponent for the logistic map."""
     return np.mean(np.log(np.abs(a * (1 - 2 * x[n_discard:]))))
 
-def lyapunov_henon(a, b, x, y, n_discard=100):
+import numpy as np
+
+def lyapunov_henon(a, b, x, y, n_discard=0):
     """Calculate the Lyapunov exponent for the Hénon map."""
     n = len(x) - n_discard
     lyap = np.zeros(n)
@@ -111,15 +179,25 @@ def lyapunov_henon(a, b, x, y, n_discard=100):
         J = np.array([[-2*a*x[i+n_discard], 1],
                       [b, 0]])
         
-        # Calculate eigenvalues and find the largest
-        eigs = np.linalg.eigvals(J.T @ J)
-        lyap[i] = np.log(np.max(np.abs(eigs)))
-    
-    # Calculate and return the Lyapunov exponent
-    return 0.5 * np.mean(lyap)
+        # Calculate eigenvalues
+        eigs = np.linalg.eigvals(J)  # Direct eigenvalue calculation
+        max_eig = np.max(np.abs(eigs))
+        
+        if max_eig > 0:
+            lyap[i] = np.log(max_eig)
+        else:
+            lyap[i] = -np.inf  # Handle non-positive eigenvalues
 
-def lyapunov_lorenz(sigma, rho, beta, trajectory, dt, n_discard=1000):
+    # Remove any -inf or NaN from lyap
+    lyap = np.nan_to_num(lyap, nan=0.0, posinf=0.0)
+
+    # Calculate and return the Lyapunov exponent
+    return 0.5 * np.mean(lyap[lyap > -np.inf])  # Ensure we only take the mean of valid entries
+
+
+def lyapunov_lorenz(sigma, rho, beta, trajectory, dt, n_discard=0):
     """Calculate the Lyapunov exponent for the Lorenz system."""
+    
     def jacobian(X):
         x, y, z = X
         return np.array([
@@ -129,16 +207,26 @@ def lyapunov_lorenz(sigma, rho, beta, trajectory, dt, n_discard=1000):
         ])
     
     n = len(trajectory)
-    J = np.zeros((3, 3))
-    Q = np.eye(3)
+    Q = np.eye(3)  # Initialize Q as identity
     running_sum = 0.0
 
     for i in range(n_discard, n):
         J = jacobian(trajectory[i])
         Q, R = np.linalg.qr(J @ Q)
-        running_sum += np.log(np.abs(np.diag(R)))
+        
+        # Check the diagonal elements of R before taking the logarithm
+        diag_R = np.diag(R)
+        
+        # Replace any non-positive elements with a very small positive value
+        diag_R = np.where(diag_R > 0, diag_R, np.nan)  # Replace non-positive values with NaN
 
-    return running_sum / ((n - n_discard) * dt)
+        running_sum += np.nansum(np.log(np.abs(diag_R)))  # Sum logs of the diagonal elements of R while ignoring NaNs
+
+    # Handle the case when n - n_discard is zero
+    if (n - n_discard) * dt == 0:
+        return np.nan  # Or return 0 or another value as appropriate
+
+    return running_sum / ((n - n_discard) * dt)  # Return the average
 
 # Parameters
 n_points = 1000
