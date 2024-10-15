@@ -33,28 +33,39 @@ def symbolize(time_series, num_bins=4):
 
 def lempel_ziv_complexity(sequence):
     """Calculate the Lempel-Ziv complexity of a symbolic sequence."""
-    sub_strings = set()
     i, n = 0, len(sequence)
+    patterns = []
+    
     
     while i < n:
-        j = i + 1
-        while j <= n:
-            sub = ''.join(sequence[i:j])
-            if sub not in sub_strings:
-                sub_strings.add(sub)
+        for j in range(i + 1, n + 1):
+            substr = sequence[i:j]
+            if substr not in sequence[0:i]:
+                patterns.append(substr)
                 i = j
                 break
-            j += 1
-        if j == n + 1:
+        if j == n:
             break
     
-    return len(sub_strings)
+    print("Sequence: ", sequence)
+    print(patterns)
+    return len(patterns)
 
-def normalized_lz_complexity(sequnce):
-    n = len(symbolic_sequence)
-    alpha = len(set(symbolic_sequence))
-    c = lempel_ziv_complexity(symbolic_sequence)
-    return (c / n) * math.log(n, alpha)
+def normalized_lz_complexity(sequence):
+    n = len(sequence)
+    alpha = len(set(sequence))
+    c = lempel_ziv_complexity(sequence)
+
+    if alpha <= 1:
+        return 0.0
+    normal_c = (c / n) * math.log(n, alpha)
+    
+    print("n: ", n)
+    print("Alpha: ", alpha)
+    print("LZ Complexity: ", c)
+    print("Normal LZ: ", normal_c)
+
+    return normal_c
 
 def most_frequent_pair(sequence):
     """Find the most frequent pair in the sequence."""
@@ -126,14 +137,15 @@ def etc_complexity(sequence):
         # Replace the pair with the new symbol.
         sequence = replace_pair(sequence, pair, new_symbol)
         step += 1
-        print(f"Step {step}: Sequence transformed to {''.join(sequence)}")
+        # print(f"Step {step}: Sequence transformed to {''.join(sequence)}")
     
     return step
 
 def normalized_etc_complexity(sequence):
-    n = len(symbolic_sequence)
-    etc = etc_complexity(symbolic_sequence)
+    n = len(sequence)
+    etc = etc_complexity(sequence)
     return etc / (n - 1)
+
 
 def shannon_entropy(sequence):
     """Calculate the Shannon entropy of a symbolic sequence."""
