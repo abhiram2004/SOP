@@ -79,7 +79,6 @@ def lyapunov_henon(a, b, x, y, n_discard=0):
     return np.mean(lyap)
 
 
-
 def lyapunov_lorenz(sigma, rho, beta, trajectory, dt, n_discard=0):
     """Calculate the Lyapunov exponent for the Lorenz system."""
     

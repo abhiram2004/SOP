@@ -1,12 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import entropy
 import math
 from collections import Counter
 import itertools
 import string
-
-from lempel_ziv_complexity import lempel_ziv_complexity
 
 def logistic_map(a, x0, n):
     """Generate a time series using the logistic map."""
@@ -31,6 +28,25 @@ def symbolize(time_series, num_bins=4):
     symbols = ['A', 'B', 'C', 'D']
     
     return ''.join([symbols[np.digitize(x, bins[1:-1]) - 1] for x in time_series])
+
+def lempel_ziv_complexity(sequence):
+    sub_strings = set()
+    n = len(sequence)
+
+    ind = 0
+    inc = 1
+    while True:
+        if ind + inc > len(sequence):
+            break
+        sub_str = sequence[ind : ind + inc]
+        if sub_str in sub_strings:
+            inc += 1
+        else:
+            sub_strings.add(sub_str)
+            ind += inc
+            inc = 1
+            
+    return len(sub_strings)
 
 def normalized_lz_complexity(sequence):
     n = len(sequence)
