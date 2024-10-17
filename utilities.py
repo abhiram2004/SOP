@@ -1,11 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import entropy
-from scipy.integrate import odeint
 import math
 from collections import Counter
 import itertools
 import string
+
+from lempel_ziv_complexity import lempel_ziv_complexity
 
 def logistic_map(a, x0, n):
     """Generate a time series using the logistic map."""
@@ -29,41 +30,16 @@ def symbolize(time_series, num_bins=4):
     bins = [min_val, v1, mean_val, v2, max_val]
     symbols = ['A', 'B', 'C', 'D']
     
-    return [symbols[np.digitize(x, bins[1:-1]) - 1] for x in time_series]
-
-def lempel_ziv_complexity(sequence):
-    """Calculate the Lempel-Ziv complexity of a symbolic sequence."""
-    i, n = 0, len(sequence)
-    patterns = []
-    
-    
-    while i < n:
-        for j in range(i + 1, n + 1):
-            substr = sequence[i:j]
-            if substr not in sequence[0:i]:
-                patterns.append(substr)
-                i = j
-                break
-        if j == n:
-            break
-    
-    print("Sequence: ", sequence)
-    print(patterns)
-    return len(patterns)
+    return ''.join([symbols[np.digitize(x, bins[1:-1]) - 1] for x in time_series])
 
 def normalized_lz_complexity(sequence):
     n = len(sequence)
     alpha = len(set(sequence))
-    c = lempel_ziv_complexity(sequence)
-
     if alpha <= 1:
         return 0.0
-    normal_c = (c / n) * math.log(n, alpha)
     
-    print("n: ", n)
-    print("Alpha: ", alpha)
-    print("LZ Complexity: ", c)
-    print("Normal LZ: ", normal_c)
+    c = lempel_ziv_complexity(sequence)
+    normal_c = (c / n) * math.log(n, alpha)
 
     return normal_c
 
@@ -149,5 +125,14 @@ def normalized_etc_complexity(sequence):
 
 def shannon_entropy(sequence):
     """Calculate the Shannon entropy of a symbolic sequence."""
-    _, counts = np.unique(sequence, return_counts=True)
+    # Convert the sequence to a list of integers if it's a string
+    if isinstance(sequence, str):
+        sequence_list = [char for char in sequence]
+    else:
+        sequence_list = sequence
+    
+    # Calculate counts of unique elements
+    _, counts = np.unique(sequence_list, return_counts=True)
+
+    # Calculate and return the Shannon entropy
     return entropy(counts, base=2)

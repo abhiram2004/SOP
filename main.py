@@ -1,6 +1,7 @@
 import numpy as np
 import math
 from collections import Counter
+from utilities import *
 
 def symbolize(time_series, num_bins=2):
     """
@@ -17,48 +18,6 @@ def symbolize(time_series, num_bins=2):
     bin_edges = np.linspace(min_val, max_val, num_bins + 1)
     return np.digitize(time_series, bin_edges[1:-1]).tolist()
 
-# Lempel-Ziv Complexity functions
-def lempel_ziv_complexity(symbolic_sequence):
-    """
-    Calculate the Lempel-Ziv complexity of a symbolic sequence.
-    
-    Args:
-    symbolic_sequence (list): The input symbolic sequence.
-    
-    Returns:
-    int: The Lempel-Ziv complexity.
-    """
-    n = len(symbolic_sequence)
-    i, j = 0, 1
-    vocabulary = set()
-    c = 1
-
-    while j < n:
-        substring = ''.join(map(str, symbolic_sequence[i:j+1]))
-        if substring in vocabulary:
-            j += 1
-        else:
-            vocabulary.add(substring)
-            i = j
-            j += 1
-            c += 1
-
-    return c
-
-def normalized_lz_complexity(symbolic_sequence):
-    """
-    Calculate the normalized Lempel-Ziv complexity.
-    
-    Args:
-    symbolic_sequence (list): The input symbolic sequence.
-    
-    Returns:
-    float: The normalized Lempel-Ziv complexity.
-    """
-    n = len(symbolic_sequence)
-    alpha = len(set(symbolic_sequence))
-    c = lempel_ziv_complexity(symbolic_sequence)
-    return (c / n) * math.log(n, alpha)
 
 def lz_complexity_time_series(time_series, num_bins=2):
     """
@@ -110,50 +69,6 @@ def nsrps_iteration(sequence):
     
     return new_sequence, changed, most_common_pair
 
-def etc_complexity(symbolic_sequence):
-    """
-    Calculate the Effort-To-Compress complexity of a symbolic sequence.
-    
-    Args:
-    symbolic_sequence (list): The input symbolic sequence.
-    
-    Returns:
-    int: The ETC complexity (number of iterations).
-    """
-    sequence = symbolic_sequence.copy()
-    iterations = 0
-    
-    while len(sequence) > 1:
-        sequence, changed, replaced_pair = nsrps_iteration(sequence)
-        if not changed or len(set(sequence)) == 1:
-            break
-        iterations += 1
-        
-        # Debugging information
-        # print(f"Iteration {iterations}:")
-        # print(f"  Replaced pair: {replaced_pair}")
-        # print(f"  New sequence: {sequence}")
-        # print(f"  Sequence length: {len(sequence)}")
-        # print(f"  Unique symbols: {len(set(sequence))}")
-        # print()
-    
-    return iterations
-
-
-def normalized_etc_complexity(symbolic_sequence):
-    """
-    Calculate the normalized Effort-To-Compress complexity.
-    
-    Args:
-    symbolic_sequence (list): The input symbolic sequence.
-    
-    Returns:
-    float: The normalized ETC complexity.
-    """
-    n = len(symbolic_sequence)
-    etc = etc_complexity(symbolic_sequence)
-    return etc / (n - 1)
-
 def etc_complexity_time_series(time_series, num_bins=2):
     """
     Calculate the Effort-To-Compress complexity for a time series.
@@ -190,20 +105,50 @@ def logistic_map(r, x0, n):
         time_series.append(x)
     return time_series
 
+def run_tests():
+    test_cases = [
+        ("aaa", 2, "Simple repetition"),
+        ("abc", 3, "No repetition"),
+        ("abcabc", 4, "Repeating pattern"),
+        ("aabcaabcaab", 5, "Overlapping patterns"),
+        ("", 0, "Empty string"),
+        ("a", 1, "Single character"),
+        ("abababab", 3, "Alternating pattern"),
+        ("aaaaabbbbb", 3, "Two blocks of repetition"),
+        ("abcdefghijklmnopqrstuvwxyz", 26, "Alphabet, no repetition"),
+        ("thequickbrownfoxjumpsoverthelazydog", 29, "Pangram"),
+        ("11010001", 5, "Binary sequence"),
+        ("あいうえおあいうえお", 6, "Non-ASCII characters"),
+        ("mississippi", 6, "Word with repetitions"),
+    ]
+
+    for sequence, expected_complexity, description in test_cases:
+        complexity = lempel_ziv_complexity(sequence)
+        result = "PASS" if complexity == expected_complexity else "FAIL"
+        print(f"{result}: {description}")
+        print(f"  Sequence: {sequence}")
+        print(f"  Expected: {expected_complexity}, Got: {complexity}\n")
+        
 # Example usage
 if __name__ == "__main__":
     # Generate a logistic map time series
-    r = 3.9  # Chaos regime
-    x0 = 0.1
-    n = 1000
-    logistic_series = logistic_map(r, x0, n)
+    # r = 3.9  # Chaos regime
+    # x0 = 0.1
+    # n = 1000
+    # logistic_series = logistic_map(r, x0, n)
 
-    # Calculate Lempel-Ziv complexity
-    lz, normalized_lz = lz_complexity_time_series(logistic_series, num_bins=2)
-    print(f"Lempel-Ziv Complexity: {lz}")
-    print(f"Normalized Lempel-Ziv Complexity: {normalized_lz}")
+    # # Calculate Lempel-Ziv complexity
+    # lz, normalized_lz = lz_complexity_time_series(logistic_series, num_bins=2)
+    # print(f"Lempel-Ziv Complexity: {lz}")
+    # print(f"Normalized Lempel-Ziv Complexity: {normalized_lz}")
 
-    # Calculate Effort-To-Compress complexity
-    etc, normalized_etc = etc_complexity_time_series(logistic_series, num_bins=2)
-    print(f"Effort-To-Compress Complexity: {etc}")
-    print(f"Normalized Effort-To-Compress Complexity: {normalized_etc}")
+    # # Calculate Effort-To-Compress complexity
+    # etc, normalized_etc = etc_complexity_time_series(logistic_series, num_bins=2)
+    # print(f"Effort-To-Compress Complexity: {etc}")
+    # print(f"Normalized Effort-To-Compress Complexity: {normalized_etc}")
+    
+    # run_tests()
+    
+    print(lempel_ziv_complexity("pprqprqp"))        # 4
+    # print(etc_complexity("11010010"))               # 5
+    
